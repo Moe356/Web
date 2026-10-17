@@ -1,0 +1,6 @@
+{
+  "name": "نظام إدارة محطة عبد المحسن الكاظمي - قسم المجاري",
+  "description": "منصة تشغيلية متكاملة لإدارة محطة عبد المحسن الكاظمي وقسم المجاري ببلدية الكاظمية: بلاغات، توزيع، أسطول، كوادر، صيانة، وسجلات رقابية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

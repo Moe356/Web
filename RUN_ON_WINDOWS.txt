@@ -1,0 +1,11 @@
+HOW TO RUN THIS PROJECT ON WINDOWS
+
+1. Install Node.js (use a current LTS release) from https://nodejs.org/
+2. Extract this ZIP.
+3. Open PowerShell or Command Prompt in the extracted folder (the folder containing package.json).
+4. Run: npm install
+5. After installation succeeds, run: npm run dev
+6. Open the Local URL printed by Vite in your browser (usually http://localhost:3000).
+
+If npm install reports a Node.js engine/version error, update Node.js to a current LTS version, reopen the terminal, and retry.
+Do not double-click index.html; this project must run through Vite.
