@@ -5,6 +5,8 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    // GitHub Pages project site URL: https://moe356.github.io/Web/
+    base: '/Web/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
