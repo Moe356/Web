@@ -6,7 +6,6 @@ import {
   Clock,
   Compass,
   Droplets,
-  Fuel,
   Gauge,
   Plus,
   Radio,
@@ -27,7 +26,6 @@ export const DashboardView: React.FC = () => {
     stationTelemetry,
     employees,
     attendance,
-    inventory,
     auditLogs,
     setActiveModule,
     setSelectedTicketId,
@@ -51,7 +49,6 @@ export const DashboardView: React.FC = () => {
   const totalStaffScheduled = attendance.length;
   const attendanceRate = totalStaffScheduled > 0 ? Math.round((presentStaff / totalStaffScheduled) * 100) : 100;
 
-  const lowStockItems = inventory.filter((i) => i.currentStock <= i.minThreshold);
 
   // Weekly completion mock statistics (last 7 days)
   const weeklyStats = [
@@ -114,7 +111,7 @@ export const DashboardView: React.FC = () => {
       </div>
 
       {/* Critical Warnings / Banners */}
-      {(urgentTickets > 0 || outOfServiceVehicles > 0 || lowStockItems.length > 0) && (
+      {(urgentTickets > 0 || outOfServiceVehicles > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {urgentTickets > 0 && (
             <div
@@ -150,22 +147,7 @@ export const DashboardView: React.FC = () => {
             </div>
           )}
 
-          {lowStockItems.length > 0 && (
-            <div
-              onClick={() => setActiveModule('fuel-inventory')}
-              className="cursor-pointer p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 flex items-start gap-3 hover:bg-blue-100/70 transition-colors"
-            >
-              <Wrench className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-bold">
-                  {language === 'ar' ? `${lowStockItems.length} مواد مخزنية بلغت الحد الحرج` : `${lowStockItems.length} Items Below Min Stock`}
-                </div>
-                <div className="text-[11px] text-blue-700 mt-0.5">
-                  {language === 'ar' ? 'رصيد مانع التسرب (Mechanical Seal) بحاجة توريد.' : 'Pump mechanical seals restock needed.'}
-                </div>
-              </div>
-            </div>
-          )}
+
         </div>
       )}
 

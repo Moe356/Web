@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { StationPump, StationTelemetry } from '../../types';
+import { StationPump, StationTelemetry, StationEquipmentRecord } from '../../types';
 import {
   Gauge,
   Zap,
   Activity,
-  Droplets,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -23,6 +22,8 @@ import { ASSETS } from '../../assets/assetPaths';
 
 export const StationOperationsView: React.FC = () => {
   const {
+    stationEquipment,
+    saveStationEquipment,
     stationPumps,
     updatePumpStatus,
     stationTelemetry,
@@ -33,6 +34,8 @@ export const StationOperationsView: React.FC = () => {
     showToast,
   } = useApp();
 
+  const [editingEquipment, setEditingEquipment] = useState<StationEquipmentRecord | null>(null);
+  const [equipmentTab, setEquipmentTab] = useState<'pump' | 'generator'>('pump');
   const [showLogModal, setShowLogModal] = useState(false);
   const [logForm, setLogForm] = useState({
     wetWellLevelMeters: stationTelemetry.wetWellLevelMeters,
@@ -44,8 +47,6 @@ export const StationOperationsView: React.FC = () => {
     operatorNotes: '',
   });
 
-  const runningPumps = stationPumps.filter((p) => p.status === 'running');
-  const totalFlowRate = stationPumps.reduce((sum, p) => sum + p.currentFlowM3H, 0);
 
   const pumpStatusLabels: Record<StationPump['status'], { ar: string; en: string; class: string }> = {
     running: { ar: 'تعمل (بالخدمة)', en: 'Running', class: 'bg-emerald-500 text-white' },
@@ -134,47 +135,7 @@ export const StationOperationsView: React.FC = () => {
       </div>
 
       {/* Main Console Metrics Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Metric 1: Total Flow */}
-        <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span>معدل التدفق الإجمالي</span>
-            <Droplets className="w-4 h-4 text-teal-600" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-teal-700 tabular-nums">
-            {totalFlowRate} <span className="text-xs font-sans text-slate-500">م³/سا</span>
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            {runningPumps.length} مضخات بالخدمة الفعلية
-          </div>
-        </div>
-
-        {/* Metric 2: Wet Well Basin Level */}
-        <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span>منسوب حوض التجميع (Wet Well)</span>
-            <Activity className="w-4 h-4 text-indigo-600" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-slate-900 tabular-nums">
-            {stationTelemetry.wetWellLevelMeters} <span className="text-xs font-sans text-slate-500">متر</span>
-          </div>
-          <div className="mt-1 flex items-center gap-1.5">
-            <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${
-                  stationTelemetry.wetWellLevelMeters > 5.0 ? 'bg-red-500' : 'bg-teal-600'
-                }`}
-                style={{
-                  width: `${(stationTelemetry.wetWellLevelMeters / stationTelemetry.maxWetWellLevelMeters) * 100}%`,
-                }}
-              />
-            </div>
-            <span className="text-[10px] text-slate-400 font-mono">
-              حد أقصى {stationTelemetry.maxWetWellLevelMeters}م
-            </span>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Metric 3: Power Grid & Voltage */}
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
@@ -204,6 +165,44 @@ export const StationOperationsView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Official technical register: editable reference data, not simulated telemetry */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">سجل المواصفات الفنية للمضخات والمولدات</h3>
+            <p className="text-xs text-slate-500">بيانات من وثيقة المحطة الرسمية — ليست قراءات لحظية. الحفظ محلي تجريبي إلى حين ربط قاعدة البيانات.</p>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setEquipmentTab('pump')} className={`px-3 py-2 rounded-lg text-sm ${equipmentTab === 'pump' ? 'bg-teal-700 text-white' : 'bg-slate-100'}`}>المضخات</button>
+            <button type="button" onClick={() => setEquipmentTab('generator')} className={`px-3 py-2 rounded-lg text-sm ${equipmentTab === 'generator' ? 'bg-teal-700 text-white' : 'bg-slate-100'}`}>المولدات</button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-right border-collapse">
+            <thead className="bg-slate-100 text-slate-700"><tr>
+              <th className="p-2">المعدة</th><th className="p-2">القدرة</th><th className="p-2">التصريف التصميمي</th><th className="p-2">الحالة</th><th className="p-2">إجراء</th>
+            </tr></thead>
+            <tbody>{stationEquipment.filter(item => item.category === equipmentTab).map(item => (
+              <tr key={item.id} className="border-b border-slate-100">
+                <td className="p-2 font-semibold">{item.nameAr} {item.manufacturer ? `(${item.manufacturer})` : ''}</td>
+                <td className="p-2" dir="ltr">{item.category === 'pump' ? (item.motorKw == null ? 'غير محدد' : `${item.motorKw} kW`) : (item.capacityKva == null ? 'غير محدد' : `${item.capacityKva} KVA`)}</td>
+                <td className="p-2" dir="ltr">{item.category === 'pump' && item.dischargeM3S != null ? `${item.dischargeM3S} m³/s` : '—'}</td>
+                <td className="p-2">{item.condition}</td>
+                <td className="p-2"><button type="button" disabled={!canPerform('update_station_pumps')} onClick={() => setEditingEquipment({...item})} className="px-3 py-1 rounded bg-teal-700 text-white disabled:opacity-40">تعديل</button></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </section>
+      {editingEquipment && <div className="fixed inset-0 z-50 bg-slate-950/50 flex items-center justify-center p-4" role="presentation">
+        <form onSubmit={(e) => { e.preventDefault(); if (!editingEquipment.nameAr.trim() || !editingEquipment.condition.trim()) { showToast('الاسم والحالة مطلوبان', 'error'); return; } saveStationEquipment(editingEquipment); setEditingEquipment(null); }} className="bg-white rounded-xl p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto space-y-3" dir="rtl">
+          <div className="flex items-center justify-between"><h3 className="font-bold">تعديل مواصفات المعدة</h3><button type="button" onClick={() => setEditingEquipment(null)} aria-label="إغلاق">✕</button></div>
+          {([['nameAr','اسم المعدة'],['manufacturer','الشركة المصنعة'],['serialNumber','رقم المولدة / التعريف'],['condition','الحالة'],['notes','ملاحظات']] as const).map(([key,label]) => <label key={key} className="block text-sm">{label}<input className="mt-1 block w-full rounded border p-2" value={editingEquipment[key] ?? ''} onChange={e => setEditingEquipment({...editingEquipment,[key]:e.target.value})}/></label>)}
+          {([['motorKw','قدرة المحرك kW'],['dischargeM3S','التصريف التصميمي m³/s'],['diameterMm','القطر mm'],['quantity','العدد'],['capacityKva','قدرة المولدة KVA']] as const).filter(([key]) => editingEquipment.category === 'pump' ? key !== 'capacityKva' : key === 'capacityKva').map(([key,label]) => <label key={key} className="block text-sm">{label}<input type="number" min="0" step="any" className="mt-1 block w-full rounded border p-2" value={editingEquipment[key] ?? ''} onChange={e => setEditingEquipment({...editingEquipment,[key]:e.target.value === '' ? undefined : Number(e.target.value)})}/></label>)}
+          <div className="flex gap-2"><button type="submit" className="bg-teal-700 text-white px-4 py-2 rounded">حفظ التعديلات</button><button type="button" onClick={() => setEditingEquipment(null)} className="bg-slate-200 px-4 py-2 rounded">إلغاء</button></div>
+        </form>
+      </div>}
 
       {/* 5 Main Sewage Lifting Pumps Technical Console */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">

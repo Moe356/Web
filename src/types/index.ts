@@ -116,6 +116,7 @@ export interface Employee {
   joinDate: string;
   emergencyContact: string;
   confidentialNotes?: string;
+  archived?: boolean; // Retain historical references when removed from active staff directory
   disciplinaryRecords: DisciplinaryRecord[];
   completedWorkOrdersCount: number;
   attendanceRatePercent: number;
@@ -162,7 +163,8 @@ export type VehicleCategory =
   | 'excavator'
   | 'mobile_pump'
   | 'generator'
-  | 'utility_pickup';
+  | 'utility_pickup'
+  | 'other';
 
 export type VehicleAvailability =
   | 'available'
@@ -280,6 +282,22 @@ export interface StationPump {
   lastServiceDate: string;
 }
 
+export interface StationEquipmentRecord {
+  id: string;
+  category: 'pump' | 'generator';
+  nameAr: string;
+  manufacturer?: string;
+  serialNumber?: string;
+  motorKw?: number;
+  dischargeM3S?: number;
+  diameterMm?: number;
+  quantity?: number;
+  capacityKva?: number;
+  condition: string;
+  notes?: string;
+  updatedAt?: string;
+}
+
 export interface StationTelemetry {
   id: string;
   timestamp: string;
@@ -319,6 +337,7 @@ export interface AdministrativeDocument {
   acknowledgedCount?: number;
   totalRecipientsCount?: number;
   isConfidential: boolean;
+  attachments?: { name: string; dataUrl: string; mimeType: string }[]; // Local prototype only
 }
 
 export interface NotificationItem {

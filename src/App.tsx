@@ -19,7 +19,6 @@ import { DispatchCenter } from './components/modules/DispatchCenter';
 import { FleetView } from './components/modules/FleetView';
 import { MaintenanceView } from './components/modules/MaintenanceView';
 import { StationOperationsView } from './components/modules/StationOperationsView';
-import { FuelInventoryView } from './components/modules/FuelInventoryView';
 import { EmployeesView } from './components/modules/EmployeesView';
 import { AttendanceView } from './components/modules/AttendanceView';
 import { PerformanceView } from './components/modules/PerformanceView';
@@ -46,8 +45,6 @@ const MainLayout: React.FC = () => {
         return <MaintenanceView />;
       case 'station-ops':
         return <StationOperationsView />;
-      case 'fuel-inventory':
-        return <FuelInventoryView />;
       case 'employees':
         return <EmployeesView />;
       case 'attendance':

@@ -1140,17 +1140,6 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     linkId: 'wo-101',
   },
   {
-    id: 'notif-02',
-    title: 'تنبيه مخزني: انخفاض رصيد مانع التسرب (Mechanical Seal)',
-    message: 'المخزون الحالي (3 قطع) أقل من الحد الأدنى الحرج (5 قطع). يرجى إصدار طلب توريد.',
-    category: 'alert',
-    severity: 'warning',
-    timestamp: '2026-10-16 08:12',
-    isRead: false,
-    linkModule: 'fuel-inventory',
-    linkId: 'inv-01',
-  },
-  {
     id: 'notif-03',
     title: 'موافقة إدارية: اعتماد الأمر الإداري لموسم الأمطار',
     message: 'تم نشر وتعميم الأمر الإداري رقم 108/2026 لكافة الشعب وتفعيل خطة الطوارئ.',

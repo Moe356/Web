@@ -378,34 +378,9 @@ export const FleetView: React.FC = () => {
             <form onSubmit={handleAddSubmit} className="space-y-3 text-xs">
               <div>
                 <label className="block font-semibold text-slate-800 mb-1">صنف الآلية:</label>
-                <select
-                  value={newVehForm.category}
-                  onChange={(e) => {
-                    const cat = e.target.value as VehicleCategory;
-                    const catNames: Record<VehicleCategory, string> = {
-                      suction_truck: 'شاحنة سحب (شافطة)',
-                      jetting_truck: 'شاحنة تسليك ونفث صاروخي',
-                      tanker: 'تانكي نقل مياه',
-                      excavator: 'حفار جنزير',
-                      mobile_pump: 'مضخة ديزل متحركة',
-                      generator: 'مولدة ديزل',
-                      utility_pickup: 'مركبة كشف وطوارئ',
-                    };
-                    setNewVehForm({
-                      ...newVehForm,
-                      category: cat,
-                      categoryNameAr: catNames[cat],
-                    });
-                  }}
-                  className="w-full p-2 border border-slate-300 rounded-lg"
-                >
-                  <option value="suction_truck">شافطة صهريج (Suction Tanker)</option>
-                  <option value="jetting_truck">صاروخية ضغط عالي (Jetting Truck)</option>
-                  <option value="tanker">تانكي نقل مياه (Water Tanker)</option>
-                  <option value="excavator">حفار هيدروليكي (Excavator)</option>
-                  <option value="mobile_pump">مضخة طوارئ متحركة</option>
-                  <option value="utility_pickup">مركبة كشف وطوارئ</option>
-                </select>
+                <input type="text" required value={newVehForm.categoryNameAr}
+                  onChange={(e) => setNewVehForm({ ...newVehForm, category: 'other', categoryNameAr: e.target.value })}
+                  placeholder="اكتب صنف الآلية" className="w-full p-2 border border-slate-300 rounded-lg" />
               </div>
 
               <div>

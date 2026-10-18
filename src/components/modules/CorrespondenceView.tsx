@@ -14,6 +14,7 @@ import {
   X,
   FileCheck,
   Shield,
+  ImagePlus,
 } from 'lucide-react';
 import { ASSETS } from '../../assets/assetPaths';
 
@@ -33,6 +34,7 @@ export const CorrespondenceView: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedDoc, setSelectedDoc] = useState<AdministrativeDocument | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [attachments, setAttachments] = useState<{name:string; dataUrl:string; mimeType:string}[]>([]);
 
   const [newDocForm, setNewDocForm] = useState({
     title: '',
@@ -61,6 +63,23 @@ export const CorrespondenceView: React.FC = () => {
     announcement: { ar: 'إعلان داخلي', class: 'bg-teal-50 text-teal-800 border-teal-200' },
   };
 
+  const handleImageSelection = async (files: FileList | null) => {
+    if (!files) return;
+    const batch = Array.from(files);
+    if (attachments.length + batch.length > 3) {
+      showToast('الحد الأقصى 3 صور لكل كتاب في النسخة التجريبية.', 'warning'); return;
+    }
+    const accepted = batch.filter(f => ['image/jpeg','image/png','image/webp'].includes(f.type) && f.size <= 750_000);
+    if (accepted.length !== batch.length) showToast('يُسمح بصور JPG/PNG/WebP فقط، بحجم أقل من 750 كيلوبايت للصورة.', 'warning');
+    const converted = await Promise.all(accepted.map(f => new Promise<{name:string;dataUrl:string;mimeType:string}>((resolve,reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({name:f.name, dataUrl:String(reader.result), mimeType:f.type});
+      reader.onerror = () => reject(new Error('تعذرت قراءة الصورة'));
+      reader.readAsDataURL(f);
+    })));
+    setAttachments(prev => [...prev, ...converted].slice(0,3));
+  };
+
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDocForm.title || !newDocForm.content) {
@@ -70,6 +89,7 @@ export const CorrespondenceView: React.FC = () => {
 
     createDocument({
       ...newDocForm,
+      attachments,
       issuerName: currentUser.name,
       issuerRole: currentUser.roleTitleAr,
       totalRecipientsCount: 32,
@@ -77,6 +97,7 @@ export const CorrespondenceView: React.FC = () => {
     });
 
     setShowAddModal(false);
+    setAttachments([]);
   };
 
   return (
@@ -225,6 +246,13 @@ export const CorrespondenceView: React.FC = () => {
                 </div>
               </div>
 
+              {!!selectedDoc.attachments?.length && <div className="space-y-2">
+                <h4 className="font-bold text-sm">الصور الرسمية المرفقة</h4>
+                {selectedDoc.attachments.map((file,i) => <a href={file.dataUrl} target="_blank" rel="noreferrer" key={i} className="block">
+                  <img src={file.dataUrl} alt={file.name} className="w-full max-h-96 object-contain border rounded-lg" />
+                  <span className="text-xs text-teal-700">{file.name}</span>
+                </a>)}
+              </div>}
               {/* Reference and Date Bar */}
               <div className="flex items-center justify-between text-xs font-mono border-b border-slate-200 pb-2">
                 <div>العدد المرجعي: <span className="font-bold">{selectedDoc.refNumber}</span></div>
@@ -366,6 +394,12 @@ export const CorrespondenceView: React.FC = () => {
                 />
               </div>
 
+              <div className="space-y-2 border border-dashed rounded-lg p-3">
+                <label className="flex gap-2 items-center font-bold text-slate-800"><ImagePlus className="w-4 h-4"/> إرفاق صور الكتب والقرارات الرسمية</label>
+                <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e => { void handleImageSelection(e.target.files); e.target.value = ''; }} className="w-full text-xs" />
+                <p className="text-[11px] text-amber-700">نسخة تجريبية: حتى 3 صور، 750 كيلوبايت للصورة. تُخزن محلياً في المتصفح وليست مناسبة لأرشفة مستندات رسمية فعلية.</p>
+                {attachments.map((f,i)=><div key={i} className="flex justify-between gap-2 text-xs"><span>{f.name}</span><button type="button" onClick={()=>setAttachments(v=>v.filter((_,j)=>j!==i))} className="text-red-600">إزالة</button></div>)}
+              </div>
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"

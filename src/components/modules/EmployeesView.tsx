@@ -17,10 +17,11 @@ import {
   Lock,
   Award,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 
 export const EmployeesView: React.FC = () => {
-  const { employees, createEmployee, updateEmployee, language, currentUser, canPerform, showToast } = useApp();
+  const { employees, createEmployee, updateEmployee, archiveEmployee, language, currentUser, canPerform, showToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
@@ -48,7 +49,8 @@ export const EmployeesView: React.FC = () => {
     confidentialNotes: '',
   });
 
-  const filteredEmployees = employees.filter((emp) => {
+  const activeEmployees = employees.filter(emp => !emp.archived);
+  const filteredEmployees = activeEmployees.filter((emp) => {
     const matchesSearch =
       emp.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.employeeNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -84,7 +86,7 @@ export const EmployeesView: React.FC = () => {
             <Users className="w-5 h-5 text-teal-600" />
             <span>{language === 'ar' ? 'إدارة الكادر البشري وشؤون الموظفين' : 'Staff Directory & Personnel'}</span>
             <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-200 text-slate-800 font-bold tabular-nums">
-              {employees.length}
+              {activeEmployees.length}
             </span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -309,7 +311,13 @@ export const EmployeesView: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-between gap-2">
+              {canPerform('archive_employee') && <button type="button" className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold bg-red-50 text-red-700 border border-red-200" onClick={() => {
+                if (window.confirm(`هل تريد إزالة الموظف ${selectedEmployee.fullName} من القائمة النشطة؟ ستُحفظ سجلاته السابقة.`)) {
+                  if (archiveEmployee(selectedEmployee.id)) setSelectedEmployee(null);
+                }
+              }}><Trash2 className="w-4 h-4"/> حذف / أرشفة الموظف</button>}
+
               <button
                 onClick={() => setSelectedEmployee(null)}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-medium text-xs"

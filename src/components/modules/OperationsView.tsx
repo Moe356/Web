@@ -853,20 +853,10 @@ export const OperationsView: React.FC = () => {
                   <label className="block font-semibold text-slate-800 mb-1">
                     {language === 'ar' ? 'المنطقة / المحلة:' : 'Neighborhood:'}
                   </label>
-                  <select
-                    value={newOrderForm.neighborhood}
+                  <input type="text" value={newOrderForm.neighborhood}
                     onChange={(e) => setNewOrderForm({ ...newOrderForm, neighborhood: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded-lg"
-                  >
-                    <option value="الكاظمية القديمة">الكاظمية القديمة</option>
-                    <option value="العطيفية">العطيفية</option>
-                    <option value="شارع النواب">شارع النواب</option>
-                    <option value="الجوادين">الجوادين</option>
-                    <option value="المحيط">المحيط</option>
-                    <option value="براثا">براثا</option>
-                    <option value="محلة 421">محلة 421</option>
-                    <option value="محلة 425">محلة 425</option>
-                  </select>
+                    placeholder="اكتب المنطقة / المحلة" required
+                    className="w-full p-2 border border-slate-300 rounded-lg" />
                 </div>
 
                 <div>

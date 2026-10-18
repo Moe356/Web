@@ -83,6 +83,12 @@ export const SettingsView: React.FC = () => {
 
   return <div className="space-y-6">
     <div><h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2"><Settings className="w-5 h-5 text-teal-600" /><span>{language === 'ar' ? 'إعدادات المنظومة وصلاحيات الوصول' : 'Station Configuration & Permissions'}</span></h2><p className="text-xs text-slate-500 mt-1">تعديل بيانات المحطة، ضبط صلاحيات العرض التجريبية، وتصدير أو استعادة بيانات النسخة التجريبية.</p></div>
+    <section className="bg-white border border-slate-200 rounded-xl p-4 text-sm space-y-2">
+      <h3 className="font-bold text-slate-900">المسؤولون الإداريون — معلومات تعريفية</h3>
+      <div>مدير قسم المجاري: <strong>م. صادق جعفر احمد</strong></div>
+      <div>مسؤول محطات: <strong>م. امير عادل حسن</strong></div>
+      <p className="text-xs text-slate-500">معلومات أولية مقدمة من العميل ولا تمنح أصحاب الأسماء حسابات أو صلاحيات بالنظام.</p>
+    </section>
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
       <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2"><Building className="w-4 h-4 text-teal-600" />بيانات محطة عبد المحسن الكاظمي والبلدية</h3>
       <form onSubmit={handleSaveSettings} className="space-y-4 text-xs"><div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -1,3 +1,4 @@
+import { INITIAL_STATION_EQUIPMENT } from '../data/stationEquipment';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   User,
@@ -11,7 +12,7 @@ import {
   FuelTransaction,
   InventoryItem,
   InventoryMovement,
-  StationPump,
+  StationPump, StationEquipmentRecord,
   StationTelemetry,
   AdministrativeDocument,
   NotificationItem,
@@ -73,6 +74,7 @@ interface AppContextType {
   employees: Employee[];
   createEmployee: (emp: Omit<Employee, 'id' | 'completedWorkOrdersCount' | 'attendanceRatePercent' | 'disciplinaryRecords'>) => void;
   updateEmployee: (id: string, updates: Partial<Employee>) => void;
+  archiveEmployee: (id: string) => boolean;
   addDisciplinaryRecord: (empId: string, record: Omit<DisciplinaryRecord, 'id'>) => boolean;
   // Attendance & Shifts
   shifts: ShiftDefinition[];
@@ -97,6 +99,8 @@ interface AppContextType {
   updateInventoryItem: (id: string, updates: Partial<InventoryItem>) => void;
   recordStockMovement: (mov: Omit<InventoryMovement, 'id' | 'date'>) => boolean;
   // Station Ops
+  stationEquipment: StationEquipmentRecord[];
+  saveStationEquipment: (record: StationEquipmentRecord) => void;
   stationPumps: StationPump[];
   updatePumpStatus: (pumpId: string, status: StationPump['status']) => void;
   stationTelemetry: StationTelemetry;
@@ -197,6 +201,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [fuelTransactions, setFuelTransactions] = useState<FuelTransaction[]>(() => getStored('fuel', INITIAL_FUEL_TRANSACTIONS));
   const [inventory, setInventory] = useState<InventoryItem[]>(() => getStored('inventory', INITIAL_INVENTORY));
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>(() => getStored('movements', INITIAL_MOVEMENTS));
+  const [stationEquipment, setStationEquipment] = useState<StationEquipmentRecord[]>(() => getStored('station_equipment_v1', INITIAL_STATION_EQUIPMENT));
   const [stationPumps, setStationPumps] = useState<StationPump[]>(() => getStored('pumps', INITIAL_PUMPS));
   const [stationTelemetry, setStationTelemetry] = useState<StationTelemetry>(() => getStored('telemetry', INITIAL_TELEMETRY));
   const [documents, setDocuments] = useState<AdministrativeDocument[]>(() => getStored('documents', INITIAL_DOCUMENTS));
@@ -311,6 +316,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return ['station_manager', 'shift_supervisor'].includes(role);
       case 'view_confidential_hr':
       case 'edit_employee':
+      case 'archive_employee':
       case 'create_employee':
       case 'manage_disciplinary':
         return ['hr_officer'].includes(role);
@@ -550,6 +556,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setStored('employees', updated);
     addAuditLog('UPDATE', 'Employee', id, `تعديل ملف الموظف ${id}`);
     showToast('تم تحديث بيانات الموظف بنجاح', 'success');
+  };
+
+  // Soft-delete to preserve work orders, attendance and audit history.
+  const archiveEmployee = (id: string): boolean => {
+    if (!canPerform('archive_employee')) {
+      showToast('حذف الموظف من القائمة النشطة يتطلب صلاحية الموارد البشرية.', 'error');
+      return false;
+    }
+    const employee = employees.find(e => e.id === id && !e.archived);
+    if (!employee) return false;
+    const updated = employees.map(e => e.id === id ? { ...e, archived: true } : e);
+    setEmployees(updated);
+    setStored('employees', updated);
+    addAuditLog('UPDATE', 'Employee', id, `أرشفة الموظف وإزالته من القائمة النشطة: ${employee.fullName}`);
+    showToast('تمت أرشفة الموظف وإزالته من القائمة النشطة مع الاحتفاظ بالسجلات السابقة.', 'success');
+    return true;
   };
 
   const addDisciplinaryRecord = (empId: string, record: Omit<DisciplinaryRecord, 'id'>): boolean => {
@@ -838,7 +860,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         severity: 'warning',
         timestamp: now,
         isRead: false,
-        linkModule: 'fuel-inventory',
+        linkModule: 'dashboard',
       };
       setNotifications((prev) => [alertNotif, ...prev]);
     }
@@ -846,6 +868,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAuditLog('UPDATE', 'InventoryMovement', newMov.referenceNumber, `حركة مخزنية (${mov.movementType}) للمادة: ${item.nameAr}`);
     showToast(`تم قيد الحركة المخزنية بنجاح، الرصيد الحالي: ${newStock} ${item.unit}`, 'success');
     return true;
+  };
+
+  const saveStationEquipment = (record: StationEquipmentRecord) => {
+    if (!canPerform('update_station_pumps')) {
+      showToast('ليس لديك صلاحية تعديل مواصفات المعدات.', 'error');
+      return;
+    }
+    const updatedRecord = { ...record, updatedAt: new Date().toISOString() };
+    const updated = stationEquipment.map((r) => r.id === record.id ? updatedRecord : r);
+    setStationEquipment(updated);
+    setStored('station_equipment_v1', updated);
+    addAuditLog('UPDATE', 'StationEquipment', record.id, `تحديث مواصفات ${record.nameAr}`);
+    showToast('تم حفظ بيانات المعدة محلياً (نسخة تجريبية)', 'success');
   };
 
   // Station Operations
@@ -997,6 +1032,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setFuelTransactions(INITIAL_FUEL_TRANSACTIONS);
     setInventory(INITIAL_INVENTORY);
     setInventoryMovements(INITIAL_MOVEMENTS);
+    setStationEquipment(INITIAL_STATION_EQUIPMENT);
+    localStorage.removeItem(STORAGE_PREFIX + 'station_equipment_v1');
     setStationPumps(INITIAL_PUMPS);
     setStationTelemetry(INITIAL_TELEMETRY);
     setDocuments(INITIAL_DOCUMENTS);
@@ -1034,6 +1071,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         employees,
         createEmployee,
         updateEmployee,
+        archiveEmployee,
         addDisciplinaryRecord,
         shifts,
         attendance,
@@ -1053,6 +1091,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         inventoryMovements,
         updateInventoryItem,
         recordStockMovement,
+        stationEquipment,
+        saveStationEquipment,
         stationPumps,
         updatePumpStatus,
         stationTelemetry,
