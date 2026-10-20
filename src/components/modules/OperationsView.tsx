@@ -49,6 +49,7 @@ export const OperationsView: React.FC = () => {
   const [neighborhoodFilter, setNeighborhoodFilter] = useState<string>('all');
 
   const [activeTicket, setActiveTicket] = useState<WorkOrder | null>(null);
+  const [editAssignment, setEditAssignment] = useState<{ assignedTeam: string; assignedVehicleId: string } | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReasonInput, setCancelReasonInput] = useState('');
@@ -88,6 +89,7 @@ export const OperationsView: React.FC = () => {
 
   // Available vehicles for assignment (must not be out of service!)
   const assignableVehicles = vehicles.filter((v) => v.availability !== 'out_of_service');
+  const neighborhoods = [...new Set(workOrders.map(order => order.neighborhood.trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'ar'));
 
   // Filtered orders
   const filteredOrders = workOrders.filter((wo) => {
@@ -216,7 +218,7 @@ export const OperationsView: React.FC = () => {
     in_progress: { ar: 'قيد التنفيذ', en: 'In Progress', class: 'bg-sky-100 text-sky-800 border-sky-300' },
     awaiting_materials: { ar: 'بانتظار مواد', en: 'Awaiting Materials', class: 'bg-orange-100 text-orange-800 border-orange-300' },
     completed: { ar: 'مكتمل ميدانياً', en: 'Completed', class: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-    verified: { ar: 'معتمد ومغلق', en: 'Verified & Closed', class: 'bg-green-200 text-green-900 border-green-400 font-bold' },
+    verified: { ar: 'منجز ومدقق', en: 'Verified & Closed', class: 'bg-green-200 text-green-900 border-green-400 font-bold' },
     cancelled: { ar: 'ملغي', en: 'Cancelled', class: 'bg-red-50 text-red-700 border-red-200' },
   };
 
@@ -322,12 +324,7 @@ export const OperationsView: React.FC = () => {
             className="text-xs py-2 px-3 border border-slate-200 rounded-lg bg-white focus:outline-hidden focus:border-teal-600"
           >
             <option value="all">{language === 'ar' ? 'كافة المناطق / المحلات' : 'All Neighborhoods'}</option>
-            <option value="الكاظمية القديمة">الكاظمية القديمة</option>
-            <option value="العطيفية">العطيفية</option>
-            <option value="شارع النواب">شارع النواب</option>
-            <option value="الجوادين">الجوادين</option>
-            <option value="المحيط">المحيط</option>
-            <option value="براثا">براثا</option>
+            {neighborhoods.map(area => <option key={area} value={area}>{area}</option>)}
           </select>
         </div>
       </div>
@@ -423,8 +420,8 @@ export const OperationsView: React.FC = () => {
 
       {/* Detailed Work Order Drawer / Modal */}
       {activeTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+        <div className="work-order-print-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <div className="print-document work-order-print bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
               <div>
@@ -453,7 +450,7 @@ export const OperationsView: React.FC = () => {
                   <span className="hidden sm:inline">{language === 'ar' ? 'طباعة' : 'Print'}</span>
                 </button>
                 <button
-                  onClick={() => setActiveTicket(null)}
+                  onClick={() => {setActiveTicket(null);setEditAssignment(null);}}
                   className="p-1 text-slate-400 hover:text-white rounded-md"
                 >
                   <X className="w-5 h-5" />
@@ -509,6 +506,19 @@ export const OperationsView: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {canPerform('edit_work_order') && <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 space-y-3">
+                <div className="flex items-center justify-between gap-2"><strong>الفريق والآلية لهذا البلاغ</strong>
+                  <button type="button" className="text-teal-800 underline" onClick={() => setEditAssignment({assignedTeam: activeTicket.assignedTeam || '', assignedVehicleId: activeTicket.assignedVehicleId || ''})}>تعديل الفريق والآلية</button>
+                </div>
+                {editAssignment && <div className="space-y-2">
+                  <label className="block">اسم الفريق<input type="text" className="mt-1 w-full border rounded p-2" value={editAssignment.assignedTeam} onChange={e => setEditAssignment({...editAssignment, assignedTeam:e.target.value})}/></label>
+                  <label className="block">الآلية<select className="mt-1 w-full border rounded p-2" value={editAssignment.assignedVehicleId} onChange={e => setEditAssignment({...editAssignment, assignedVehicleId:e.target.value})}>
+                    <option value="">بدون آلية</option>{vehicles.filter(v => v.availability !== 'out_of_service' || v.id === activeTicket.assignedVehicleId).map(v => <option key={v.id} value={v.id}>{v.assetNumber} — {v.categoryNameAr}</option>)}
+                  </select></label>
+                  <div className="flex gap-2"><button type="button" className="bg-teal-700 text-white rounded px-3 py-2" onClick={() => {updateWorkOrder(activeTicket.id, editAssignment);setActiveTicket({...activeTicket,...editAssignment});setEditAssignment(null);}}>حفظ التكليف</button><button type="button" onClick={()=>setEditAssignment(null)}>إلغاء</button></div>
+                </div>}
+              </div>}
 
               {/* Description */}
               <div>
@@ -615,7 +625,7 @@ export const OperationsView: React.FC = () => {
                         onClick={() => executeStatusChange('verified')}
                         className="px-3 py-1.5 bg-green-800 hover:bg-green-700 text-white rounded-lg font-bold shadow-xs cursor-pointer"
                       >
-                        مصادقة واعتماد الإغلاق النهائي
+                        تدقيق واعتماد الإنجاز
                       </button>
                     )}
 
@@ -667,7 +677,7 @@ export const OperationsView: React.FC = () => {
             {/* Modal Footer */}
             <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
               <button
-                onClick={() => setActiveTicket(null)}
+                onClick={() => {setActiveTicket(null);setEditAssignment(null);}}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-medium text-xs"
               >
                 {language === 'ar' ? 'إغلاق' : 'Close'}
@@ -929,6 +939,11 @@ export const OperationsView: React.FC = () => {
                     className="w-full p-2 border border-slate-300 rounded-lg bg-white"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-800 mb-1">اسم الفريق المكلف (قابل للتعديل لكل بلاغ):</label>
+                <input type="text" value={newOrderForm.assignedTeam} onChange={e => setNewOrderForm({...newOrderForm, assignedTeam: e.target.value})} placeholder="أدخل اسم الفريق" className="w-full p-2 border border-slate-300 rounded-lg" />
               </div>
 
               {/* Assigned Vehicle (Enforcing out of service prevention!) */}

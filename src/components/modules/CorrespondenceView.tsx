@@ -38,9 +38,9 @@ export const CorrespondenceView: React.FC = () => {
 
   const [newDocForm, setNewDocForm] = useState({
     title: '',
-    category: 'official_order' as DocumentCategory,
-    categoryAr: 'أمر إداري ملزم',
-    targetDepartment: 'كافة شعب وأقسام المحطة والآليات',
+    category: 'official_letter' as DocumentCategory,
+    categoryAr: 'كتاب رسمي',
+    targetDepartment: 'شعبة المحطات',
     content: '',
     requiresAcknowledgement: true,
     isConfidential: false,
@@ -56,6 +56,8 @@ export const CorrespondenceView: React.FC = () => {
   });
 
   const categoryLabels: Record<DocumentCategory, { ar: string; class: string }> = {
+    official_letter: { ar: 'كتاب رسمي', class: 'bg-teal-50 text-teal-800 border-teal-200' },
+    memorandum: { ar: 'مطالعة', class: 'bg-indigo-50 text-indigo-800 border-indigo-200' },
     official_order: { ar: 'أمر إداري ملزم', class: 'bg-red-50 text-red-800 border-red-200' },
     circular: { ar: 'تعميم إداري', class: 'bg-blue-50 text-blue-800 border-blue-200' },
     leave_request: { ar: 'طلب إجازة رسمية', class: 'bg-purple-50 text-purple-800 border-purple-200' },
@@ -149,7 +151,9 @@ export const CorrespondenceView: React.FC = () => {
           className="text-xs py-2 px-3 border border-slate-200 rounded-lg bg-white focus:outline-hidden focus:border-teal-600"
         >
           <option value="all">كافة الوثائق والمراسلات</option>
-          <option value="official_order">أوامر إدارية ملزمة</option>
+          <option value="official_letter">كتاب رسمي</option>
+          <option value="memorandum">مطالعة</option>
+          <option value="official_order">أوامر إدارية سابقة</option>
           <option value="circular">تعاميم إدارية</option>
           <option value="leave_request">طلبات إجازة</option>
         </select>
@@ -195,7 +199,7 @@ export const CorrespondenceView: React.FC = () => {
 
       {/* Official Print-Ready Document Viewer Modal */}
       {selectedDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+        <div className="correspondence-print-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
             {/* Modal Controls Bar */}
             <div className="p-3 bg-slate-900 text-white flex items-center justify-between no-print">
@@ -220,7 +224,7 @@ export const CorrespondenceView: React.FC = () => {
             </div>
 
             {/* Official Municipal Letterhead & Content */}
-            <div className="p-8 overflow-y-auto space-y-6 text-slate-900">
+            <div className="print-document correspondence-print p-8 overflow-y-auto space-y-6 text-slate-900">
               {/* Header Letterhead */}
               <div className="flex items-center justify-between pb-4 border-b-2 border-slate-900 gap-4">
                 <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-amber-500/40 shrink-0">
@@ -323,7 +327,7 @@ export const CorrespondenceView: React.FC = () => {
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
               <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-teal-600" />
-                <span>إصدار كتاب رسمي أو تعميم إداري</span>
+                <span>إصدار وثيقة رسمية</span>
               </h3>
               <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -338,6 +342,8 @@ export const CorrespondenceView: React.FC = () => {
                   onChange={(e) => {
                     const cat = e.target.value as DocumentCategory;
                     const catNames: Record<DocumentCategory, string> = {
+                      official_letter: 'كتاب رسمي',
+                      memorandum: 'مطالعة',
                       official_order: 'أمر إداري ملزم',
                       circular: 'تعميم إداري',
                       leave_request: 'طلب إجازة رسمية',
@@ -352,10 +358,9 @@ export const CorrespondenceView: React.FC = () => {
                   }}
                   className="w-full p-2 border border-slate-300 rounded-lg"
                 >
-                  <option value="official_order">أمر إداري ملزم (Official Order)</option>
-                  <option value="circular">تعميم إداري (Circular)</option>
-                  <option value="leave_request">طلب إجازة رسمية (Leave Request)</option>
-                  <option value="announcement">إعلان وتوجيه داخلي</option>
+                  <option value="official_letter">كتاب رسمي</option>
+                  <option value="memorandum">مطالعة</option>
+                  <option value="leave_request">طلب إجازة رسمي</option>
                 </select>
               </div>
 
@@ -372,14 +377,17 @@ export const CorrespondenceView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-800 mb-1">الجهة أو الشعبة الموجه إليها:</label>
-                <input
-                  type="text"
+                <label className="block font-semibold text-slate-800 mb-1">الشعبة أو الدائرة:</label>
+                <select
                   required
                   value={newDocForm.targetDepartment}
                   onChange={(e) => setNewDocForm({ ...newDocForm, targetDepartment: e.target.value })}
                   className="w-full p-2 border border-slate-300 rounded-lg"
-                />
+                >
+                  {['شعبة الصيانة', 'شعبة المحطات', 'شعبة التنفيذ', 'الوحدة الادارية', 'مفرزه كهربائيه', 'مفرزه مكانيكة', 'مفرزه المولدات'].map(department => (
+                    <option key={department} value={department}>{department}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

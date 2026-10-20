@@ -21,13 +21,14 @@ import {
 } from 'lucide-react';
 
 export const EmployeesView: React.FC = () => {
-  const { employees, createEmployee, updateEmployee, archiveEmployee, language, currentUser, canPerform, showToast } = useApp();
+  const { employees, shifts, createEmployee, updateEmployee, archiveEmployee, language, currentUser, canPerform, showToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const canViewConfidential = currentUser.role === 'hr_officer' || currentUser.role === 'super_admin';
 
@@ -53,7 +54,6 @@ export const EmployeesView: React.FC = () => {
   const filteredEmployees = activeEmployees.filter((emp) => {
     const matchesSearch =
       emp.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.employeeNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.jobTitle.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDept = departmentFilter === 'all' || emp.department === departmentFilter;
     const matchesStatus = statusFilter === 'all' || emp.status === statusFilter;
@@ -115,7 +115,7 @@ export const EmployeesView: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={language === 'ar' ? 'البحث بالاسم، الرقم الوظيفي، أو المسمى...' : 'Search employees...'}
+            placeholder={language === 'ar' ? 'البحث بالاسم أو المسمى...' : 'Search employees...'}
             className="w-full ps-9 pe-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:border-teal-600 bg-slate-50 focus:bg-white"
           />
         </div>
@@ -151,9 +151,9 @@ export const EmployeesView: React.FC = () => {
           <table className="w-full text-right text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold">
               <tr>
-                <th className="py-3 px-4">الرقم الوظيفي</th>
                 <th className="py-3 px-4">اسم الموظف</th>
                 <th className="py-3 px-4">المسمى الوظيفي</th>
+                <th className="py-3 px-4">الشفت</th>
                 <th className="py-3 px-4">الشعبة / الدائرة</th>
                 <th className="py-3 px-4">الهاتف</th>
                 <th className="py-3 px-4">الحالة</th>
@@ -169,9 +169,6 @@ export const EmployeesView: React.FC = () => {
                   onClick={() => setSelectedEmployee(emp)}
                   className="hover:bg-slate-50 cursor-pointer transition-colors"
                 >
-                  <td className="py-3 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">
-                    {emp.employeeNumber}
-                  </td>
                   <td className="py-3 px-4">
                     <div className="font-bold text-slate-900">{emp.fullName}</div>
                     <div className="text-[11px] text-slate-400 font-mono">
@@ -179,6 +176,7 @@ export const EmployeesView: React.FC = () => {
                     </div>
                   </td>
                   <td className="py-3 px-4 font-medium text-slate-800">{emp.jobTitle}</td>
+                  <td className="py-3 px-4 text-slate-700">{shifts.find((shift) => shift.id === emp.assignedShiftId)?.nameAr || 'غير محدد'}</td>
                   <td className="py-3 px-4 text-slate-600">{emp.department}</td>
                   <td className="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">{emp.phone}</td>
                   <td className="py-3 px-4 whitespace-nowrap">
@@ -216,9 +214,6 @@ export const EmployeesView: React.FC = () => {
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
               <div>
-                <span className="font-mono text-teal-400 text-xs font-bold">
-                  {selectedEmployee.employeeNumber}
-                </span>
                 <h3 className="font-bold text-base text-white mt-0.5">
                   {selectedEmployee.fullName}
                 </h3>
@@ -312,6 +307,7 @@ export const EmployeesView: React.FC = () => {
             </div>
 
             <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-between gap-2">
+              {canPerform('edit_employee') && <button type="button" className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200" onClick={() => { setEditingEmployee({...selectedEmployee}); setSelectedEmployee(null); }}>تعديل معلومات الموظف</button>}
               {canPerform('archive_employee') && <button type="button" className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold bg-red-50 text-red-700 border border-red-200" onClick={() => {
                 if (window.confirm(`هل تريد إزالة الموظف ${selectedEmployee.fullName} من القائمة النشطة؟ ستُحفظ سجلاته السابقة.`)) {
                   if (archiveEmployee(selectedEmployee.id)) setSelectedEmployee(null);
@@ -329,6 +325,27 @@ export const EmployeesView: React.FC = () => {
         </div>
       )}
 
+      {/* Edit employee profile: existing ID and attendance history remain unchanged */}
+      {editingEmployee && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto" dir="rtl">
+            <h3 className="font-bold text-lg mb-4">تعديل معلومات الموظف</h3>
+            <form className="space-y-3 text-sm" onSubmit={(e) => {
+              e.preventDefault();
+              if (!editingEmployee.fullName.trim() || !editingEmployee.jobTitle.trim()) { showToast('الاسم والمسمى الوظيفي مطلوبان.', 'warning'); return; }
+              updateEmployee(editingEmployee.id, {fullName: editingEmployee.fullName.trim(), jobTitle: editingEmployee.jobTitle.trim(), department: editingEmployee.department, phone: editingEmployee.phone, email: editingEmployee.email, supervisorName: editingEmployee.supervisorName, assignedShiftId: editingEmployee.assignedShiftId, qualifications: editingEmployee.qualifications, status: editingEmployee.status});
+              setEditingEmployee(null);
+            }}>
+              {([['fullName','الاسم الكامل'],['jobTitle','المسمى الوظيفي'],['department','القسم / الشعبة'],['supervisorName','المسؤول المباشر'],['phone','الهاتف'],['email','البريد الإلكتروني'],['qualifications','المؤهلات والخبرات']] as const).map(([field,label]) => (
+                <label key={field} className="block"><span className="block font-semibold mb-1">{label}</span><input className="w-full border border-slate-300 rounded-lg p-2" value={editingEmployee[field]} onChange={(e) => setEditingEmployee({...editingEmployee,[field]: e.target.value})} required={field === 'fullName' || field === 'jobTitle'}/></label>
+              ))}
+              <label className="block"><span className="block font-semibold mb-1">نوع الشفت</span><select value={editingEmployee.assignedShiftId} onChange={(e) => setEditingEmployee({...editingEmployee, assignedShiftId: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg">{shifts.map((shift) => <option key={shift.id} value={shift.id}>{shift.nameAr}</option>)}</select></label>
+              <label className="block"><span className="block font-semibold mb-1">حالة الموظف</span><select className="w-full border border-slate-300 rounded-lg p-2" value={editingEmployee.status} onChange={(e) => setEditingEmployee({...editingEmployee,status: e.target.value as EmployeeStatus})}>{Object.entries(statusLabels).map(([value,status]) => <option key={value} value={value}>{status.ar}</option>)}</select></label>
+              <div className="flex gap-2 pt-3"><button type="submit" className="px-4 py-2 rounded-lg bg-teal-700 text-white">حفظ التعديلات</button><button type="button" onClick={() => setEditingEmployee(null)} className="px-4 py-2 bg-slate-100 rounded-lg">إلغاء</button></div>
+            </form>
+          </div>
+        </div>
+      )}
       {/* Add Employee Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
@@ -405,6 +422,13 @@ export const EmployeesView: React.FC = () => {
                 </div>
               </div>
 
+              <div>
+                <label className="block font-semibold text-slate-800 mb-1">نوع الشفت: *</label>
+                <select required value={newEmpForm.assignedShiftId} onChange={(e) => setNewEmpForm({ ...newEmpForm, assignedShiftId: e.target.value })} className="w-full p-2 border border-slate-300 rounded-lg">
+                  {shifts.map((shift) => <option key={shift.id} value={shift.id}>{shift.nameAr}</option>)}
+                </select>
+                <p className="mt-1 text-slate-500">سيظهر هذا الشفت تلقائيًا عند تسجيل حضور الموظف.</p>
+              </div>
               <div>
                 <label className="block font-semibold text-slate-800 mb-1">المؤهلات والخبرات:</label>
                 <textarea

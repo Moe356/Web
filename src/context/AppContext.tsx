@@ -192,7 +192,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const [settings, setSettings] = useState<StationSettings>(() => getStored('settings', INITIAL_SETTINGS));
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() => getStored('work_orders', INITIAL_WORK_ORDERS));
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() => {
+    const existing = getStored<WorkOrder[]>('work_orders', INITIAL_WORK_ORDERS);
+    // Preserve record identities/history; give each existing record a stable consecutive public number.
+    if (existing.every(order => /^\d+$/.test(order.ticketNumber))) return existing;
+    const numbered = [...existing].reverse().map((order, index) => ({ ...order, ticketNumber: String(index + 1) })).reverse();
+    setStored('work_orders', numbered);
+    return numbered;
+  });
   const [employees, setEmployees] = useState<Employee[]>(() => getStored('employees', INITIAL_EMPLOYEES));
   const [shifts] = useState<ShiftDefinition[]>(INITIAL_SHIFTS);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => getStored('attendance', INITIAL_ATTENDANCE));
@@ -201,7 +208,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [fuelTransactions, setFuelTransactions] = useState<FuelTransaction[]>(() => getStored('fuel', INITIAL_FUEL_TRANSACTIONS));
   const [inventory, setInventory] = useState<InventoryItem[]>(() => getStored('inventory', INITIAL_INVENTORY));
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>(() => getStored('movements', INITIAL_MOVEMENTS));
-  const [stationEquipment, setStationEquipment] = useState<StationEquipmentRecord[]>(() => getStored('station_equipment_v1', INITIAL_STATION_EQUIPMENT));
+  const [stationEquipment, setStationEquipment] = useState<StationEquipmentRecord[]>(() => getStored('station_equipment_v2', INITIAL_STATION_EQUIPMENT));
   const [stationPumps, setStationPumps] = useState<StationPump[]>(() => getStored('pumps', INITIAL_PUMPS));
   const [stationTelemetry, setStationTelemetry] = useState<StationTelemetry>(() => getStored('telemetry', INITIAL_TELEMETRY));
   const [documents, setDocuments] = useState<AdministrativeDocument[]>(() => getStored('documents', INITIAL_DOCUMENTS));
@@ -357,12 +364,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast(`لا يمكن إسناد الآلية ${vehicle?.assetNumber || ''} لأنها مرتبطة بأمر عمل نشط آخر. أغلق الأمر السابق أو اختر آلية أخرى.`, 'warning');
       return;
     }
-    const ticketSeq = 414 + workOrders.length;
+    const ticketSeq = Math.max(0, ...workOrders.map(order => Number(order.ticketNumber) || 0)) + 1;
     const now = new Date().toISOString().replace('T', ' ').substring(0, 16);
     const newOrder: WorkOrder = {
       ...data,
       id: `wo-${Date.now().toString().slice(-5)}`,
-      ticketNumber: `KADH-2026-${ticketSeq}`,
+      ticketNumber: String(ticketSeq),
       createdAt: now,
       updatedAt: now,
       statusHistory: [
@@ -645,7 +652,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let updated: AttendanceRecord[];
     if (existing) {
       updated = attendance.map((a) => a.id === existing.id ? {
-        ...a, status, notes: note.trim() || a.notes, leaveType,
+        ...a, status, shiftId: emp.assignedShiftId, notes: note.trim() || a.notes, leaveType,
         isApproved: true, updatedBy: currentUser.name, updatedAt: now.toISOString(),
         ...(status === 'leave' || status === 'absent' || status === 'excused' ? { checkInTime: null, checkOutTime: null } : {}),
         ...(status === 'present' && !a.checkInTime ? { checkInTime: statusTime } : {}),
@@ -878,7 +885,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedRecord = { ...record, updatedAt: new Date().toISOString() };
     const updated = stationEquipment.map((r) => r.id === record.id ? updatedRecord : r);
     setStationEquipment(updated);
-    setStored('station_equipment_v1', updated);
+    setStored('station_equipment_v2', updated);
     addAuditLog('UPDATE', 'StationEquipment', record.id, `تحديث مواصفات ${record.nameAr}`);
     showToast('تم حفظ بيانات المعدة محلياً (نسخة تجريبية)', 'success');
   };
@@ -940,7 +947,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const id = `doc-${Date.now().toString().slice(-4)}`;
     const now = new Date().toISOString().substring(0, 10);
     const refSeq = 109 + documents.length;
-    const refNumber = doc.category === 'official_order'
+    const refNumber = doc.category === 'memorandum'
+      ? `مطالعة / ${refSeq} / 2026`
+      : doc.category === 'leave_request'
+      ? `طلب إجازة / ${refSeq} / 2026`
+      : doc.category === 'official_order'
       ? `أمر إداري / ك / ${refSeq} / 2026`
       : doc.category === 'circular'
       ? `تعميم داخلي / مجاري / ${refSeq} / 2026`

@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Clock,
   Compass,
-  Droplets,
   Gauge,
   Plus,
   Radio,
@@ -23,7 +22,6 @@ export const DashboardView: React.FC = () => {
     workOrders,
     vehicles,
     stationPumps,
-    stationTelemetry,
     employees,
     attendance,
     auditLogs,
@@ -43,7 +41,6 @@ export const DashboardView: React.FC = () => {
 
   const availableVehicles = vehicles.filter((v) => v.availability === 'available').length;
   const outOfServiceVehicles = vehicles.filter((v) => v.availability === 'out_of_service').length;
-  const runningPumps = stationPumps.filter((p) => p.status === 'running').length;
 
   const presentStaff = attendance.filter((a) => a.status === 'present').length;
   const totalStaffScheduled = attendance.length;
@@ -152,7 +149,7 @@ export const DashboardView: React.FC = () => {
       )}
 
       {/* KPI Cards Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Card 1: Active Tickets */}
         <div
           onClick={() => setActiveModule('operations')}
@@ -201,40 +198,6 @@ export const DashboardView: React.FC = () => {
           </div>
           <div className="mt-1 text-[11px] text-slate-500">
             {language === 'ar' ? `${outOfServiceVehicles} متوقفة للصيانة` : `${outOfServiceVehicles} out of service`}
-          </div>
-        </div>
-
-        {/* Card 4: Station Flow */}
-        <div
-          onClick={() => setActiveModule('station-ops')}
-          className="cursor-pointer p-3.5 bg-white rounded-xl border border-slate-200 shadow-xs hover:border-teal-500 transition-all"
-        >
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span>{language === 'ar' ? 'تدفق محطة الرفع' : 'Station Flow'}</span>
-            <Droplets className="w-3.5 h-3.5 text-teal-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold font-mono text-teal-700 tabular-nums">
-            {stationTelemetry.totalFlowRateM3H} <span className="text-xs font-sans text-slate-500">م³/سا</span>
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            {language === 'ar' ? `${runningPumps} مضخات بالخدمة` : `${runningPumps} pumps running`}
-          </div>
-        </div>
-
-        {/* Card 5: Wet Well Level */}
-        <div
-          onClick={() => setActiveModule('station-ops')}
-          className="cursor-pointer p-3.5 bg-white rounded-xl border border-slate-200 shadow-xs hover:border-teal-500 transition-all"
-        >
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span>{language === 'ar' ? 'منسوب حوض المحطة' : 'Wet Well Depth'}</span>
-            <Gauge className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-          <div className="mt-2 text-2xl font-bold font-mono text-slate-900 tabular-nums">
-            {stationTelemetry.wetWellLevelMeters} <span className="text-xs font-sans text-slate-500">متر</span>
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            {language === 'ar' ? `الأقصى: ${stationTelemetry.maxWetWellLevelMeters} م` : `Max: ${stationTelemetry.maxWetWellLevelMeters}m`}
           </div>
         </div>
 
@@ -425,7 +388,7 @@ export const DashboardView: React.FC = () => {
                 in_progress: 'قيد التنفيذ',
                 awaiting_materials: 'بانتظار مواد',
                 completed: 'مكتمل',
-                verified: 'معتمد ومغلق',
+                verified: 'منجز ومدقق',
                 cancelled: 'ملغي',
               };
 

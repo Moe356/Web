@@ -32,7 +32,7 @@ export const ReportsView: React.FC = () => {
   const fleetReadinessPercent = vehicles.length > 0 ? Math.round((availableFleetCount / vehicles.length) * 100) : 100;
 
   // Breakdown by neighborhood
-  const areas = ['الكاظمية القديمة', 'العطيفية', 'شارع النواب', 'الجوادين', 'المحيط', 'براثا'];
+  const areas = [...new Set(workOrders.map(order => order.neighborhood.trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'ar'));
   const areaBreakdown = areas.map((area) => {
     const areaOrders = workOrders.filter((w) => w.neighborhood === area);
     const completed = areaOrders.filter((w) => w.status === 'completed' || w.status === 'verified').length;
@@ -111,7 +111,7 @@ export const ReportsView: React.FC = () => {
         <div className="space-y-1">
           <div className="font-bold">منهجية احتساب المؤشرات التشغيلية الرسمية:</div>
           <div className="text-[11px] text-blue-800 leading-relaxed">
-            • <strong>نسبة إنجاز البلاغات:</strong> (البلاغات المكتملة + المعتمدة ÷ إجمالي البلاغات المسجلة) × 100%.<br />
+            • <strong>نسبة إنجاز البلاغات:</strong> (البلاغات المنجزة + المدققة ÷ إجمالي البلاغات المسجلة) × 100%.<br />
             • <strong>جاهزية الأسطول:</strong> الآليات المتوفرة والمكلفة فعلياً مستثنى منها الآليات المسجلة (خارج الخدمة).<br />
             • <strong>ساعات التوقف (Downtime):</strong> مجموع ساعات الحجز بالورشة المثبتة في أوامر الصيانة المعتمدة.
           </div>

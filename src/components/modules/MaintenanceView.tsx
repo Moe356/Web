@@ -39,8 +39,8 @@ export const MaintenanceView: React.FC = () => {
     severity: 'routine' as MaintenanceSeverity,
     assignedTechnicianName: 'م. أحمد جاسم الربيعي وفريق الصيانة',
     partsUsedStr: 'فلاتر أصلية، زيت هيدروليك',
-    partsCostIqd: 350000,
-    laborCostIqd: 100000,
+    partsCostIqd: 0,
+    laborCostIqd: 0,
     downtimeHours: 6,
     maintenanceDate: new Date().toISOString().substring(0, 10),
     nextServiceDueDate: '2026-12-15',
@@ -126,7 +126,7 @@ export const MaintenanceView: React.FC = () => {
           <p className="text-xs text-slate-500 mt-0.5">
             {language === 'ar'
               ? 'أوامر الصيانة الوقائية والعلاجية لآليات ومضخات محطة عبد المحسن الكاظمي'
-              : 'Preventive and corrective work orders, costs, parts, and downtime tracking'}
+              : 'Preventive and corrective work orders, parts, and downtime tracking'}
           </p>
         </div>
 
@@ -224,7 +224,6 @@ export const MaintenanceView: React.FC = () => {
                 <th className="py-3 px-4">وصف العطل / الصيانة</th>
                 <th className="py-3 px-4">الخطورة</th>
                 <th className="py-3 px-4">الفني المسؤول</th>
-                <th className="py-3 px-4">كلفة المواد والعمل (د.ع)</th>
                 <th className="py-3 px-4">التوقف (ساعة)</th>
                 <th className="py-3 px-4">الحالة</th>
                 <th className="py-3 px-4 text-center">الإجراء</th>
@@ -255,9 +254,6 @@ export const MaintenanceView: React.FC = () => {
                   </td>
                   <td className="py-3 px-4 text-slate-700 whitespace-nowrap">
                     {rec.assignedTechnicianName}
-                  </td>
-                  <td className="py-3 px-4 font-mono text-slate-900 whitespace-nowrap">
-                    {(rec.partsCostIqd + rec.laborCostIqd).toLocaleString()} د.ع
                   </td>
                   <td className="py-3 px-4 font-mono text-slate-700 whitespace-nowrap">
                     {rec.downtimeHours} سا
@@ -303,9 +299,6 @@ export const MaintenanceView: React.FC = () => {
                 ['تاريخ فتح / صيانة الأمر', activeRecord.maintenanceDate || 'غير مسجل'],
                 ['موعد الصيانة القادم', activeRecord.nextServiceDueDate || 'غير محدد'],
                 ['مدة التوقف المسجلة', `${activeRecord.downtimeHours} ساعة`],
-                ['كلفة قطع الغيار', `${activeRecord.partsCostIqd.toLocaleString()} د.ع`],
-                ['كلفة العمل', `${activeRecord.laborCostIqd.toLocaleString()} د.ع`],
-                ['إجمالي الكلفة', `${(activeRecord.partsCostIqd + activeRecord.laborCostIqd).toLocaleString()} د.ع`],
                 ['قطع الغيار / المواد', activeRecord.partsUsed?.join('، ') || 'لا توجد مواد مسجلة'],
                 ['ملاحظات الفني', activeRecord.technicianNotes || 'لا توجد ملاحظات مسجلة'],
               ].map(([label, value]) => (
@@ -403,15 +396,6 @@ export const MaintenanceView: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-800 mb-1">كلفة المواد التقديرية (د.ع):</label>
-                  <input
-                    type="number"
-                    value={newMaintForm.partsCostIqd}
-                    onChange={(e) => setNewMaintForm({ ...newMaintForm, partsCostIqd: parseInt(e.target.value) || 0 })}
-                    className="w-full p-2 border border-slate-300 rounded-lg"
-                  />
-                </div>
                 <div>
                   <label className="block font-semibold text-slate-800 mb-1">ساعات التوقف المقدرة:</label>
                   <input

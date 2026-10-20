@@ -14,6 +14,8 @@ import {
   Printer,
   Download,
   Info,
+  Search,
+  ChevronDown,
 } from 'lucide-react';
 
 export const AttendanceView: React.FC = () => {
@@ -39,6 +41,8 @@ export const AttendanceView: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusEmployeeId, setStatusEmployeeId] = useState('');
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<AttendanceRecord['status']>('present');
   const [leaveType, setLeaveType] = useState<NonNullable<AttendanceRecord['leaveType']>>('annual');
   const [statusNote, setStatusNote] = useState('');
@@ -46,6 +50,7 @@ export const AttendanceView: React.FC = () => {
   const pendingCorrections = attendance.filter((a) => a.manualEditRequested && !a.isApproved);
   const dailyRecords = attendance.filter((a) => a.date === selectedDate && a.employeeName.toLowerCase().includes(searchText.trim().toLowerCase()));
   const recordedEmployeeIds = new Set(attendance.filter((a) => a.date === selectedDate).map((a) => a.employeeId));
+  const filteredModalEmployees = employees.filter((emp) => emp.fullName.toLowerCase().includes(employeeSearch.trim().toLowerCase()));
   const missingAttendanceEmployees = employees.filter((emp) => !recordedEmployeeIds.has(emp.id) && emp.fullName.toLowerCase().includes(searchText.trim().toLowerCase()));
   const presentCount = dailyRecords.filter((record) => record.status === 'present' || record.status === 'late').length;
   const absentCount = dailyRecords.filter((record) => record.status === 'absent').length;
@@ -171,7 +176,7 @@ export const AttendanceView: React.FC = () => {
                 <span className="text-[11px] font-mono text-teal-700 font-bold">{presentCount} حاضر/متأخر</span>
                 <span className="text-[11px] font-mono text-red-700 font-bold">{absentCount} غائب</span>
                 <span className="text-[11px] font-mono text-violet-700 font-bold">{leaveCount} إجازة</span>
-                {canPerform('approve_attendance') && <button onClick={() => { setStatusEmployeeId(employees[0]?.id || ''); setShowStatusModal(true); }} className="px-3 py-2 bg-teal-700 text-white rounded-lg text-xs font-bold hover:bg-teal-600">+ تسجيل حالة موظف</button>}
+                {canPerform('approve_attendance') && <button onClick={() => { setStatusEmployeeId(missingAttendanceEmployees[0]?.id || employees[0]?.id || ''); setNewStatus('present'); setStatusNote(''); setShowStatusModal(true); }} className="px-3 py-2 bg-teal-700 text-white rounded-lg text-xs font-bold hover:bg-teal-600">+ تسجيل حالة موظف</button>}
               </div>
             </div>
 
@@ -352,7 +357,49 @@ export const AttendanceView: React.FC = () => {
             <h3 className="font-bold text-base text-slate-900 mb-1">تسجيل أو تعديل حالة الدوام</h3>
             <p className="text-xs text-slate-500 mb-4">يسجّل النظام اسم المسؤول ووقت التعديل في سجل التدقيق التجريبي.</p>
             <form onSubmit={(e) => { e.preventDefault(); if (!statusEmployeeId) { showToast('اختر الموظف أولاً.', 'warning'); return; } if ((newStatus === 'absent' || newStatus === 'excused' || newStatus === 'leave') && statusNote.trim().length < 3) { showToast('يرجى إدخال سبب أو ملاحظة للحالة المختارة.', 'warning'); return; } setAttendanceStatus(statusEmployeeId, selectedDate, newStatus, statusNote, newStatus === 'leave' ? leaveType : undefined); setShowStatusModal(false); setStatusNote(''); }} className="space-y-3 text-xs">
-              <div><label className="block mb-1 font-semibold">الموظف</label><select required value={statusEmployeeId} onChange={(e) => setStatusEmployeeId(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg bg-white">{employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.fullName}</option>)}</select></div>
+              <div>
+                <label className="block mb-1 font-semibold">الموظف</label>
+                <div className="relative">
+                  <button type="button" aria-expanded={employeeDropdownOpen} aria-haspopup="listbox"
+                    onClick={() => { setEmployeeDropdownOpen(!employeeDropdownOpen); setEmployeeSearch(''); }}
+                    className="w-full flex items-center justify-between gap-2 p-2.5 border border-slate-300 rounded-lg bg-white text-right focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="truncate">{employees.find((emp) => emp.id === statusEmployeeId)?.fullName || 'اختر الموظف'}</span>
+                      {recordedEmployeeIds.has(statusEmployeeId) && <span className="text-emerald-700 flex items-center gap-1 whitespace-nowrap"><CheckCircle2 className="w-4 h-4" /> تم التسجيل</span>}
+                    </span>
+                    <ChevronDown className="w-4 h-4 shrink-0 text-slate-500" />
+                  </button>
+                  {employeeDropdownOpen && (
+                    <div className="absolute z-[70] top-full mt-1 w-full bg-white rounded-lg border border-slate-200 shadow-xl overflow-hidden" role="listbox" aria-label="اختر الموظف">
+                      <div className="p-2 border-b border-slate-100 relative">
+                        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input autoFocus type="search" aria-label="بحث عن موظف" placeholder="ابحث باسم الموظف..." value={employeeSearch}
+                          onChange={(e) => setEmployeeSearch(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Escape') setEmployeeDropdownOpen(false); }}
+                          className="w-full rounded-md border border-slate-200 py-2 pr-9 pl-3 focus:ring-2 focus:ring-teal-500 outline-none" />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto">
+                        {filteredModalEmployees.length === 0 ? <p className="p-3 text-slate-500 text-center">لا يوجد موظف بهذا الاسم</p> :
+                          filteredModalEmployees.map((emp) => (
+                            <button key={emp.id} type="button" role="option" aria-selected={statusEmployeeId === emp.id}
+                              onClick={() => { setStatusEmployeeId(emp.id); setEmployeeDropdownOpen(false); setEmployeeSearch(''); }}
+                              className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 text-right hover:bg-teal-50 ${statusEmployeeId === emp.id ? 'bg-teal-50' : ''}`}>
+                              <span className="truncate">{emp.fullName}</span>
+                              {recordedEmployeeIds.has(emp.id) ? (
+                                <span className="flex gap-1 items-center shrink-0 text-emerald-700 font-semibold"><CheckCircle2 className="w-4 h-4" /> ✓ تم التسجيل</span>
+                              ) : <span className="shrink-0 text-slate-400">غير مسجل</span>}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-500">✓ تعني أن حالة دوام الموظف مسجلة في تاريخ {selectedDate}. يمكنك اختيار الموظف مجددًا لتعديل حالته.</p>
+              </div>
+              <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 flex items-center justify-between">
+                <span className="font-semibold text-teal-900">شفت الموظف (تلقائي)</span>
+                <span className="font-bold text-teal-800">{shifts.find((shift) => shift.id === employees.find((emp) => emp.id === statusEmployeeId)?.assignedShiftId)?.nameAr || 'اختر الموظف'}</span>
+              </div>
               <div><label className="block mb-1 font-semibold">حالة الدوام</label><select value={newStatus} onChange={(e) => setNewStatus(e.target.value as AttendanceRecord['status'])} className="w-full p-2 border border-slate-300 rounded-lg bg-white"><option value="present">حاضر</option><option value="late">متأخر</option><option value="absent">غائب</option><option value="leave">إجازة معتمدة</option><option value="excused">عذر رسمي / مهمة رسمية</option></select></div>
               {newStatus === 'leave' && <div><label className="block mb-1 font-semibold">نوع الإجازة</label><select value={leaveType} onChange={(e) => setLeaveType(e.target.value as NonNullable<AttendanceRecord['leaveType']>)} className="w-full p-2 border border-slate-300 rounded-lg bg-white"><option value="annual">إجازة سنوية</option><option value="sick">إجازة مرضية</option><option value="emergency">إجازة طارئة</option><option value="official_mission">مهمة رسمية</option></select></div>}
               <div><label className="block mb-1 font-semibold">السبب أو الملاحظات {['absent','excused','leave'].includes(newStatus) ? '*' : '(اختياري)'}</label><textarea rows={3} value={statusNote} onChange={(e) => setStatusNote(e.target.value)} placeholder="اكتب سبب الحالة أو رقم كتاب الإجازة دون إدخال تفاصيل طبية حساسة..." className="w-full p-2 border border-slate-300 rounded-lg" /></div>

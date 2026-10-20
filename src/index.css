@@ -40,19 +40,48 @@
   background: rgba(100, 116, 139, 0.6);
 }
 
-/* Print layout optimizations for official administrative orders and reports */
+/* Print only the requested document, without reserving layout space for the app. */
 @media print {
-  aside, nav, header button, .no-print {
+  @page { size: A4 portrait; margin: 12mm; }
+  html, body, #root { height: auto !important; min-height: 0 !important; overflow: visible !important; }
+  body { background: white !important; color: black !important; }
+  body:has(.print-document) *:not(:has(.print-document)):not(.print-document):not(.print-document *) {
     display: none !important;
   }
-  body {
-    background: #ffffff !important;
-    color: #000000 !important;
-  }
-  .print-only {
+  body:has(.print-document) :is(#root, #root *:has(.print-document)) {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
     display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
   }
-  .print-break-inside-avoid {
-    break-inside: avoid;
+  body:has(.print-document) .print-document {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
   }
+  .print-document .no-print, .print-document button, .no-print { display: none !important; }
+  .print-document .overflow-y-auto { overflow: visible !important; max-height: none !important; }
+  .print-break-inside-avoid { break-inside: avoid; }
+  .work-order-print .bg-slate-900 { background: white !important; color: black !important; }
+  .work-order-print .bg-slate-900 * { color: black !important; }
 }

@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import { ASSETS } from '../../assets/assetPaths';
 
+const EQUIPMENT_CONDITIONS = ['شغالة', 'عاطلة', 'تحت الصيانة'] as const;
+const normalizeEquipmentCondition = (condition: string) => EQUIPMENT_CONDITIONS.includes(condition as typeof EQUIPMENT_CONDITIONS[number]) ? condition : '';
+
 export const StationOperationsView: React.FC = () => {
   const {
     stationEquipment,
@@ -178,28 +181,37 @@ export const StationOperationsView: React.FC = () => {
             <button type="button" onClick={() => setEquipmentTab('generator')} className={`px-3 py-2 rounded-lg text-sm ${equipmentTab === 'generator' ? 'bg-teal-700 text-white' : 'bg-slate-100'}`}>المولدات</button>
           </div>
         </div>
+        {equipmentTab === 'pump' && <div className="mb-3 p-3 rounded-lg bg-teal-50 border border-teal-200 text-sm">
+          <strong>التصريف الكلي للمضخات:</strong> <span dir="ltr" className="font-mono font-bold">{stationEquipment.filter(item => item.category === 'pump').reduce((total, item) => total + (item.dischargeM3S ?? 0) * (item.quantity ?? 0), 0).toFixed(3)} m³/s</span>
+          <p className="text-xs text-slate-500 mt-1">مجموع (العدد × التصريف) لكل فئة. بيانات تصميمية وليست قراءة تشغيلية لحظية. اضغط على صف لتعديل بياناته.</p>
+        </div>}
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-right border-collapse">
             <thead className="bg-slate-100 text-slate-700"><tr>
-              <th className="p-2">المعدة</th><th className="p-2">القدرة</th><th className="p-2">التصريف التصميمي</th><th className="p-2">الحالة</th><th className="p-2">إجراء</th>
+              {equipmentTab === 'pump' ? <><th className="p-2">المعدة</th><th className="p-2">العدد</th><th className="p-2">الحجم</th><th className="p-2">التصريف</th><th className="p-2">التصريف الكلي</th><th className="p-2">الحالة</th></> : <><th className="p-2">المعدة</th><th className="p-2">الحجم</th><th className="p-2">الحالة</th></>}
             </tr></thead>
             <tbody>{stationEquipment.filter(item => item.category === equipmentTab).map(item => (
-              <tr key={item.id} className="border-b border-slate-100">
+              <tr key={item.id} tabIndex={canPerform('update_station_pumps') ? 0 : undefined} role={canPerform('update_station_pumps') ? 'button' : undefined} title="اضغط لتعديل بيانات المعدة" onClick={() => { if(canPerform('update_station_pumps')) setEditingEquipment({...item, condition: normalizeEquipmentCondition(item.condition)}); }} onKeyDown={e => { if(canPerform('update_station_pumps') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEditingEquipment({...item, condition: normalizeEquipmentCondition(item.condition)}); } }} className="border-b border-slate-100 hover:bg-teal-50 cursor-pointer focus:outline-teal-700">
                 <td className="p-2 font-semibold">{item.nameAr} {item.manufacturer ? `(${item.manufacturer})` : ''}</td>
-                <td className="p-2" dir="ltr">{item.category === 'pump' ? (item.motorKw == null ? 'غير محدد' : `${item.motorKw} kW`) : (item.capacityKva == null ? 'غير محدد' : `${item.capacityKva} KVA`)}</td>
-                <td className="p-2" dir="ltr">{item.category === 'pump' && item.dischargeM3S != null ? `${item.dischargeM3S} m³/s` : '—'}</td>
-                <td className="p-2">{item.condition}</td>
-                <td className="p-2"><button type="button" disabled={!canPerform('update_station_pumps')} onClick={() => setEditingEquipment({...item})} className="px-3 py-1 rounded bg-teal-700 text-white disabled:opacity-40">تعديل</button></td>
+                {equipmentTab === 'pump' ? <>
+                  <td className="p-2" dir="ltr">{item.quantity ?? 0}</td>
+                  <td className="p-2" dir="ltr">{item.sizeLabel ?? 'غير محدد'}</td>
+                  <td className="p-2" dir="ltr">{(item.dischargeM3S ?? 0).toFixed(3)} m³/s</td>
+                  <td className="p-2 font-bold" dir="ltr">{((item.quantity ?? 0) * (item.dischargeM3S ?? 0)).toFixed(3)} m³/s</td>
+                  <td className="p-2">{normalizeEquipmentCondition(item.condition) || 'غير محددة'}</td>
+                </> : <><td className="p-2" dir="ltr">{item.capacityKva == null ? 'غير محدد' : `${item.capacityKva} KVA`}</td><td className="p-2">{normalizeEquipmentCondition(item.condition) || 'غير محددة'}</td></>}
               </tr>
             ))}</tbody>
           </table>
         </div>
       </section>
       {editingEquipment && <div className="fixed inset-0 z-50 bg-slate-950/50 flex items-center justify-center p-4" role="presentation">
-        <form onSubmit={(e) => { e.preventDefault(); if (!editingEquipment.nameAr.trim() || !editingEquipment.condition.trim()) { showToast('الاسم والحالة مطلوبان', 'error'); return; } saveStationEquipment(editingEquipment); setEditingEquipment(null); }} className="bg-white rounded-xl p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto space-y-3" dir="rtl">
+        <form onSubmit={(e) => { e.preventDefault(); if (!editingEquipment.nameAr.trim() || !normalizeEquipmentCondition(editingEquipment.condition) || (editingEquipment.category === 'pump' && (!Number.isInteger(editingEquipment.quantity) || (editingEquipment.quantity ?? 0) < 0))) { showToast('الاسم والحالة مطلوبان', 'error'); return; } saveStationEquipment(editingEquipment); setEditingEquipment(null); }} className="bg-white rounded-xl p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto space-y-3" dir="rtl">
           <div className="flex items-center justify-between"><h3 className="font-bold">تعديل مواصفات المعدة</h3><button type="button" onClick={() => setEditingEquipment(null)} aria-label="إغلاق">✕</button></div>
-          {([['nameAr','اسم المعدة'],['manufacturer','الشركة المصنعة'],['serialNumber','رقم المولدة / التعريف'],['condition','الحالة'],['notes','ملاحظات']] as const).map(([key,label]) => <label key={key} className="block text-sm">{label}<input className="mt-1 block w-full rounded border p-2" value={editingEquipment[key] ?? ''} onChange={e => setEditingEquipment({...editingEquipment,[key]:e.target.value})}/></label>)}
-          {([['motorKw','قدرة المحرك kW'],['dischargeM3S','التصريف التصميمي m³/s'],['diameterMm','القطر mm'],['quantity','العدد'],['capacityKva','قدرة المولدة KVA']] as const).filter(([key]) => editingEquipment.category === 'pump' ? key !== 'capacityKva' : key === 'capacityKva').map(([key,label]) => <label key={key} className="block text-sm">{label}<input type="number" min="0" step="any" className="mt-1 block w-full rounded border p-2" value={editingEquipment[key] ?? ''} onChange={e => setEditingEquipment({...editingEquipment,[key]:e.target.value === '' ? undefined : Number(e.target.value)})}/></label>)}
+          {editingEquipment.category === 'pump' && <label className="block text-sm">الحجم<input className="mt-1 block w-full rounded border p-2" value={editingEquipment.sizeLabel ?? ''} onChange={e => setEditingEquipment({...editingEquipment,sizeLabel:e.target.value})}/></label>}
+          {([['nameAr','اسم المعدة'],['manufacturer','الشركة المصنعة'],['serialNumber','رقم المولدة / التعريف'],['notes','ملاحظات']] as const).map(([key,label]) => <label key={key} className="block text-sm">{label}<input className="mt-1 block w-full rounded border p-2" value={editingEquipment[key] ?? ''} onChange={e => setEditingEquipment({...editingEquipment,[key]:e.target.value})}/></label>)}
+          <label className="block text-sm">الحالة<select className="mt-1 block w-full rounded border p-2" value={normalizeEquipmentCondition(editingEquipment.condition)} onChange={e => setEditingEquipment({...editingEquipment,condition:e.target.value})} required><option value="" disabled>اختر الحالة</option>{EQUIPMENT_CONDITIONS.map(status => <option key={status} value={status}>{status}</option>)}</select></label>
+          {([['motorKw','قدرة المحرك kW'],['dischargeM3S','التصريف m³/s'],['diameterMm','القطر mm'],['quantity','العدد'],['capacityKva','الحجم KVA']] as const).filter(([key]) => editingEquipment.category === 'pump' ? key !== 'capacityKva' : key === 'capacityKva').map(([key,label]) => <label key={key} className="block text-sm">{label}<input type="number" min="0" step={key === 'quantity' ? '1' : 'any'} className="mt-1 block w-full rounded border p-2" value={editingEquipment[key] ?? ''} onChange={e => setEditingEquipment({...editingEquipment,[key]:e.target.value === '' ? undefined : Number(e.target.value)})}/></label>)}
           <div className="flex gap-2"><button type="submit" className="bg-teal-700 text-white px-4 py-2 rounded">حفظ التعديلات</button><button type="button" onClick={() => setEditingEquipment(null)} className="bg-slate-200 px-4 py-2 rounded">إلغاء</button></div>
         </form>
       </div>}

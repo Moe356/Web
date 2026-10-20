@@ -291,6 +291,7 @@ export interface StationEquipmentRecord {
   motorKw?: number;
   dischargeM3S?: number;
   diameterMm?: number;
+  sizeLabel?: string;
   quantity?: number;
   capacityKva?: number;
   condition: string;
@@ -317,6 +318,8 @@ export interface StationTelemetry {
 export type DocumentCategory =
   | 'circular'
   | 'official_order'
+  | 'official_letter'
+  | 'memorandum'
   | 'leave_request'
   | 'material_request'
   | 'announcement';
