@@ -17,6 +17,7 @@ import {
   ImagePlus,
 } from 'lucide-react';
 import { ASSETS } from '../../assets/assetPaths';
+import amanatBaghdadLogo from '../../assets/images/amanat_baghdad_logo.jpg';
 
 export const CorrespondenceView: React.FC = () => {
   const {
@@ -229,8 +230,8 @@ export const CorrespondenceView: React.FC = () => {
               <div className="flex items-center justify-between pb-4 border-b-2 border-slate-900 gap-4">
                 <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-amber-500/40 shrink-0">
                   <img
-                    src={ASSETS.municipalLogo}
-                    alt="شعار بلدية الكاظمية المقدسة"
+                    src={amanatBaghdadLogo}
+                    alt="شعار أمانة بغداد"
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
@@ -242,8 +243,8 @@ export const CorrespondenceView: React.FC = () => {
                 </div>
                 <div className="w-16 h-16 shrink-0 hidden sm:block">
                   <img
-                    src={ASSETS.municipalLogo}
-                    alt="شعار بلدية الكاظمية المقدسة"
+                    src={amanatBaghdadLogo}
+                    alt="شعار أمانة بغداد"
                     className="w-full h-full object-cover rounded-full ring-2 ring-amber-500/40 opacity-90"
                     referrerPolicy="no-referrer"
                   />

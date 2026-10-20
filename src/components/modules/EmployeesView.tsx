@@ -32,12 +32,22 @@ export const EmployeesView: React.FC = () => {
 
   const canViewConfidential = currentUser.role === 'hr_officer' || currentUser.role === 'super_admin';
 
+  const DEPARTMENT_OPTIONS = [
+    'شعبة الصيانة',
+    'شعبة المحطات',
+    'شعبة التنفيذ',
+    'الوحدة الادارية',
+    'مفرزه كهربائيه',
+    'مفرزه مكانيكة',
+    'مفرزه المولدات',
+  ] as const;
+
   const [newEmpForm, setNewEmpForm] = useState({
     employeeNumber: `EMP-KADH-${employees.length + 109}`,
     fullName: '',
     role: 'driver_worker' as UserRole,
     jobTitle: '',
-    department: 'شعبة التشغيل الميداني',
+    department: 'شعبة المحطات',
     supervisorName: 'حسين فاضل العبيدي',
     phone: '',
     email: '',
@@ -126,12 +136,9 @@ export const EmployeesView: React.FC = () => {
           className="text-xs py-2 px-3 border border-slate-200 rounded-lg bg-white focus:outline-hidden focus:border-teal-600"
         >
           <option value="all">كافة الشعب والأقسام</option>
-          <option value="إدارة المحطة والعمليات الهندسية">إدارة المحطة</option>
-          <option value="شعبة التشغيل الميداني">شعبة التشغيل الميداني</option>
-          <option value="شعبة الصيانة الكهروميكانيكية">شعبة الصيانة</option>
-          <option value="شعبة الآليات والخدمة الميدانية">شعبة الآليات</option>
-          <option value="غرفة السيطرة والاتصالات">غرفة السيطرة</option>
-          <option value="شعبة الموارد البشرية والتدريب">الموارد البشرية</option>
+          {DEPARTMENT_OPTIONS.map((department) => (
+            <option key={department} value={department}>{department}</option>
+          ))}
         </select>
 
         <select
@@ -336,9 +343,10 @@ export const EmployeesView: React.FC = () => {
               updateEmployee(editingEmployee.id, {fullName: editingEmployee.fullName.trim(), jobTitle: editingEmployee.jobTitle.trim(), department: editingEmployee.department, phone: editingEmployee.phone, email: editingEmployee.email, supervisorName: editingEmployee.supervisorName, assignedShiftId: editingEmployee.assignedShiftId, qualifications: editingEmployee.qualifications, status: editingEmployee.status});
               setEditingEmployee(null);
             }}>
-              {([['fullName','الاسم الكامل'],['jobTitle','المسمى الوظيفي'],['department','القسم / الشعبة'],['supervisorName','المسؤول المباشر'],['phone','الهاتف'],['email','البريد الإلكتروني'],['qualifications','المؤهلات والخبرات']] as const).map(([field,label]) => (
+              {([['fullName','الاسم الكامل'],['jobTitle','المسمى الوظيفي'],['supervisorName','المسؤول المباشر'],['phone','الهاتف'],['email','البريد الإلكتروني'],['qualifications','المؤهلات والخبرات']] as const).map(([field,label]) => (
                 <label key={field} className="block"><span className="block font-semibold mb-1">{label}</span><input className="w-full border border-slate-300 rounded-lg p-2" value={editingEmployee[field]} onChange={(e) => setEditingEmployee({...editingEmployee,[field]: e.target.value})} required={field === 'fullName' || field === 'jobTitle'}/></label>
               ))}
+              <label className="block"><span className="block font-semibold mb-1">الشعبة / الدائرة</span><select value={editingEmployee.department} onChange={(e) => setEditingEmployee({...editingEmployee, department: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg">{DEPARTMENT_OPTIONS.map((department) => <option key={department} value={department}>{department}</option>)}</select></label>
               <label className="block"><span className="block font-semibold mb-1">نوع الشفت</span><select value={editingEmployee.assignedShiftId} onChange={(e) => setEditingEmployee({...editingEmployee, assignedShiftId: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg">{shifts.map((shift) => <option key={shift.id} value={shift.id}>{shift.nameAr}</option>)}</select></label>
               <label className="block"><span className="block font-semibold mb-1">حالة الموظف</span><select className="w-full border border-slate-300 rounded-lg p-2" value={editingEmployee.status} onChange={(e) => setEditingEmployee({...editingEmployee,status: e.target.value as EmployeeStatus})}>{Object.entries(statusLabels).map(([value,status]) => <option key={value} value={value}>{status.ar}</option>)}</select></label>
               <div className="flex gap-2 pt-3"><button type="submit" className="px-4 py-2 rounded-lg bg-teal-700 text-white">حفظ التعديلات</button><button type="button" onClick={() => setEditingEmployee(null)} className="px-4 py-2 bg-slate-100 rounded-lg">إلغاء</button></div>
@@ -392,10 +400,9 @@ export const EmployeesView: React.FC = () => {
                     onChange={(e) => setNewEmpForm({ ...newEmpForm, department: e.target.value })}
                     className="w-full p-2 border border-slate-300 rounded-lg"
                   >
-                    <option value="شعبة التشغيل الميداني">شعبة التشغيل الميداني</option>
-                    <option value="شعبة الصيانة الكهروميكانيكية">شعبة الصيانة الكهروميكانيكية</option>
-                    <option value="شعبة الآليات والخدمة الميدانية">شعبة الآليات</option>
-                    <option value="غرفة السيطرة والاتصالات">غرفة السيطرة</option>
+                    {DEPARTMENT_OPTIONS.map((department) => (
+                      <option key={department} value={department}>{department}</option>
+                    ))}
                   </select>
                 </div>
               </div>

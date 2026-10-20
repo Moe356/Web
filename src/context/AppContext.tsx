@@ -101,6 +101,7 @@ interface AppContextType {
   // Station Ops
   stationEquipment: StationEquipmentRecord[];
   saveStationEquipment: (record: StationEquipmentRecord) => void;
+  deleteStationEquipment: (id: string) => void;
   stationPumps: StationPump[];
   updatePumpStatus: (pumpId: string, status: StationPump['status']) => void;
   stationTelemetry: StationTelemetry;
@@ -208,7 +209,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [fuelTransactions, setFuelTransactions] = useState<FuelTransaction[]>(() => getStored('fuel', INITIAL_FUEL_TRANSACTIONS));
   const [inventory, setInventory] = useState<InventoryItem[]>(() => getStored('inventory', INITIAL_INVENTORY));
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>(() => getStored('movements', INITIAL_MOVEMENTS));
-  const [stationEquipment, setStationEquipment] = useState<StationEquipmentRecord[]>(() => getStored('station_equipment_v2', INITIAL_STATION_EQUIPMENT));
+  const [stationEquipment, setStationEquipment] = useState<StationEquipmentRecord[]>(() => {
+    const expanded = localStorage.getItem(STORAGE_PREFIX + 'station_equipment_v3');
+    if (expanded) {
+      try { return JSON.parse(expanded) as StationEquipmentRecord[]; } catch { /* fall back to migration */ }
+    }
+    // Convert grouped pumps from Update 10/11/12 into individual physical equipment records.
+    const previous = getStored('station_equipment_v2', INITIAL_STATION_EQUIPMENT);
+    const items = previous.flatMap((item: StationEquipmentRecord) => item.category === 'pump'
+      ? Array.from({ length: Math.min(100, Math.max(0, Math.floor(item.quantity ?? 1))) }, (_, index) => ({ ...item, id: `${item.id}-unit-${index + 1}`, quantity: 1 }))
+      : [{ ...item, quantity: 1 }]);
+    setStored('station_equipment_v3', items);
+    return items;
+  });
   const [stationPumps, setStationPumps] = useState<StationPump[]>(() => getStored('pumps', INITIAL_PUMPS));
   const [stationTelemetry, setStationTelemetry] = useState<StationTelemetry>(() => getStored('telemetry', INITIAL_TELEMETRY));
   const [documents, setDocuments] = useState<AdministrativeDocument[]>(() => getStored('documents', INITIAL_DOCUMENTS));
@@ -882,12 +895,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('ليس لديك صلاحية تعديل مواصفات المعدات.', 'error');
       return;
     }
-    const updatedRecord = { ...record, updatedAt: new Date().toISOString() };
-    const updated = stationEquipment.map((r) => r.id === record.id ? updatedRecord : r);
+    const updatedRecord = { ...record, quantity: 1, updatedAt: new Date().toISOString() };
+    const exists = stationEquipment.some((r) => r.id === record.id);
+    const updated = exists
+      ? stationEquipment.map((r) => r.id === record.id ? updatedRecord : r)
+      : [...stationEquipment, updatedRecord];
     setStationEquipment(updated);
-    setStored('station_equipment_v2', updated);
-    addAuditLog('UPDATE', 'StationEquipment', record.id, `تحديث مواصفات ${record.nameAr}`);
+    setStored('station_equipment_v3', updated);
+    addAuditLog(exists ? 'UPDATE' : 'CREATE', 'StationEquipment', record.id, `${exists ? 'تعديل' : 'إضافة'} ${record.nameAr}`);
     showToast('تم حفظ بيانات المعدة محلياً (نسخة تجريبية)', 'success');
+  };
+
+  const deleteStationEquipment = (id: string) => {
+    if (!canPerform('update_station_pumps')) {
+      showToast('ليس لديك صلاحية حذف المعدات.', 'error');
+      return;
+    }
+    const target = stationEquipment.find(item => item.id === id);
+    if (!target) return;
+    const updated = stationEquipment.filter(item => item.id !== id);
+    setStationEquipment(updated);
+    setStored('station_equipment_v3', updated);
+    addAuditLog('DELETE', 'StationEquipment', id, `إزالة ${target.nameAr} من السجل التجريبي`);
+    showToast('تم حذف المعدة من السجل المحلي.', 'success');
   };
 
   // Station Operations
@@ -1034,6 +1064,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem(STORAGE_PREFIX + 'notifs');
     localStorage.removeItem(STORAGE_PREFIX + 'audit');
     localStorage.removeItem(STORAGE_PREFIX + 'settings');
+    localStorage.removeItem(STORAGE_PREFIX + 'station_equipment_v3');
 
     setWorkOrders(INITIAL_WORK_ORDERS);
     setEmployees(INITIAL_EMPLOYEES);
@@ -1043,7 +1074,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setFuelTransactions(INITIAL_FUEL_TRANSACTIONS);
     setInventory(INITIAL_INVENTORY);
     setInventoryMovements(INITIAL_MOVEMENTS);
-    setStationEquipment(INITIAL_STATION_EQUIPMENT);
+    setStationEquipment(INITIAL_STATION_EQUIPMENT.flatMap(item => item.category === 'pump' ? Array.from({ length: item.quantity ?? 1 }, (_, index) => ({ ...item, id: `${item.id}-unit-${index + 1}`, quantity: 1 })) : [{ ...item, quantity: 1 }]));
     localStorage.removeItem(STORAGE_PREFIX + 'station_equipment_v1');
     setStationPumps(INITIAL_PUMPS);
     setStationTelemetry(INITIAL_TELEMETRY);
@@ -1104,6 +1135,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         recordStockMovement,
         stationEquipment,
         saveStationEquipment,
+        deleteStationEquipment,
         stationPumps,
         updatePumpStatus,
         stationTelemetry,
